@@ -1,6 +1,8 @@
+import os
 import random
 import sys
 
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
 
 
