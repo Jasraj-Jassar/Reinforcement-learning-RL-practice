@@ -12,5 +12,7 @@ env/
 *.log
 *.tmp
 
+q_table.json
+
 .DS_Store
 Thumbs.db
