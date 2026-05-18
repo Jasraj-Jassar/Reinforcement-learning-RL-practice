@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from dino_interface import DO_NOTHING, JUMP, DinoRunnerInterface, get_state_bucket
+from dino_interface import DO_NOTHING, JUMP
 
 
 Q_TABLE_PATH = Path("q_table.json")
@@ -27,6 +27,15 @@ def get_q_values(state_bucket):
     return q_table[state_bucket]
 
 
+def choose_action(state_bucket):
+    q_values = get_q_values(state_bucket)
+
+    if q_values[JUMP] > q_values[DO_NOTHING]:
+        return JUMP
+
+    return DO_NOTHING
+
+
 def save_q_table(path=Q_TABLE_PATH):
     json_ready_table = {}
 
@@ -49,26 +58,3 @@ def load_q_table(path=Q_TABLE_PATH):
         q_table[key_to_state(state_key)] = {
             int(action): value for action, value in q_values.items()
         }
-
-
-def main():
-    load_q_table()
-
-    env = DinoRunnerInterface(seed=1)
-    state = env.reset()
-
-    for step in range(10):
-        bucketed_state = get_state_bucket(state)
-        q_values = get_q_values(bucketed_state)
-        print(f"step={step} bucket={bucketed_state} q_values={q_values}")
-        state, _reward, done, _info = env.step(DO_NOTHING)
-
-        if done:
-            break
-
-    save_q_table()
-    print(f"saved {len(q_table)} states to {Q_TABLE_PATH}")
-
-
-if __name__ == "__main__":
-    main()

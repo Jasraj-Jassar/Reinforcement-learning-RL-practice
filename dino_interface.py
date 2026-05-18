@@ -1,5 +1,4 @@
 import random
-import time
 from dataclasses import asdict, dataclass
 
 from dino_game import Dino, Obstacle
@@ -154,33 +153,3 @@ def action_name(action):
     if action == JUMP:
         return "jump"
     return "wait"
-
-
-def main():
-    env = DinoRunnerInterface(seed=1)
-    state = env.reset()
-
-    for step_number in range(300):
-        action = DO_NOTHING
-        state, reward, done, info = env.step(action)
-
-        print(
-            f"step={step_number:03d} "
-            f"distance={state['distance_to_obstacle']:7.1f} "
-            f"y={state['dino_y']:6.1f} "
-            f"vy={state['dino_velocity_y']:6.1f} "
-            f"ground={int(state['on_ground'])} "
-            f"action={action_name(action):4s} "
-            f"reward={reward:6.1f} "
-            f"score={info['score']}"
-        )
-
-        if done:
-            print("episode ended: crashed")
-            break
-
-        time.sleep(0.03)
-
-
-if __name__ == "__main__":
-    main()

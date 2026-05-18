@@ -1,15 +1,16 @@
 import os
-import sys
 
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
 
 from dino_game import BLACK, FPS, GRAY, GROUND_Y, HEIGHT, RED, WHITE, WIDTH, draw_text
-from dino_interface import DO_NOTHING, JUMP, DinoRunnerInterface, action_name, get_state_bucket
+from dino_interface import DO_NOTHING, DinoRunnerInterface, action_name, get_state_bucket
+from q_learning_agent import choose_action, get_q_values, load_q_table, save_q_table
 
 
 def draw_interface_panel(screen, font, state, action, reward, done):
     bucket_state = get_state_bucket(state)
+    q_values = get_q_values(bucket_state)
     lines = [
         "Agent sees",
         f"distance bucket: {bucket_state[0]}",
@@ -17,6 +18,8 @@ def draw_interface_panel(screen, font, state, action, reward, done):
         f"velocity bucket: {bucket_state[2]}",
         f"ground bucket: {bucket_state[3]}",
         f"state: {bucket_state}",
+        f"wait q: {q_values[0]:.2f}",
+        f"jump q: {q_values[1]:.2f}",
         f"action: {action_name(action)}",
         f"reward: {reward:.1f}",
     ]
@@ -26,14 +29,13 @@ def draw_interface_panel(screen, font, state, action, reward, done):
     line_height = 22
 
     for index, line in enumerate(lines):
-        if not line:
-            continue
-
         color = RED if done and line.startswith("reward") else BLACK
         draw_text(screen, font, line, panel_x, panel_y + index * line_height, color)
 
 
 def main():
+    load_q_table()
+
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Dino Runner RL Interface")
@@ -46,31 +48,18 @@ def main():
     action = DO_NOTHING
     reward = 0.0
     done = False
+    running = True
 
-    while True:
+    while running:
         clock.tick(FPS)
-        next_action = DO_NOTHING
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_ESCAPE, pygame.K_q):
-                    pygame.quit()
-                    sys.exit()
-
-                if event.key == pygame.K_r:
-                    state = env.reset()
-                    action = DO_NOTHING
-                    reward = 0.0
-                    done = False
-                elif event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
-                    next_action = JUMP
+                running = False
 
         if not done:
-            action = next_action
+            bucket_state = get_state_bucket(state)
+            action = choose_action(bucket_state)
             state, reward, done, _info = env.step(action)
 
         screen.fill(WHITE)
@@ -82,9 +71,12 @@ def main():
 
         if done:
             draw_text(screen, big_font, "Crashed", 225, 95, RED)
-            draw_text(screen, font, "Press R to restart", 226, 140)
+            draw_text(screen, font, "Close window to quit", 218, 140)
 
         pygame.display.flip()
+
+    save_q_table()
+    pygame.quit()
 
 
 if __name__ == "__main__":

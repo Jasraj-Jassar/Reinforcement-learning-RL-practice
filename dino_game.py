@@ -1,6 +1,5 @@
 import os
 import random
-import sys
 
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
@@ -74,67 +73,6 @@ class Obstacle:
         pygame.draw.rect(screen, RED, self.rect)
 
 
-def reset_game():
-    return Dino(), Obstacle(), 0, False
-
-
 def draw_text(screen, font, text, x, y, color=BLACK):
     image = font.render(text, True, color)
     screen.blit(image, (x, y))
-
-
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Minimal Dino Runner")
-    clock = pygame.time.Clock()
-    font = pygame.font.SysFont(None, 28)
-    big_font = pygame.font.SysFont(None, 44)
-
-    dino, obstacle, score, game_over = reset_game()
-
-    while True:
-        clock.tick(FPS)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-            if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_ESCAPE, pygame.K_q):
-                    pygame.quit()
-                    sys.exit()
-
-                if event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
-                    dino.jump()
-
-                if event.key == pygame.K_r and game_over:
-                    dino, obstacle, score, game_over = reset_game()
-
-        if not game_over:
-            dino.update()
-            obstacle.update()
-            score += 1
-
-            if dino.rect.colliderect(obstacle.rect):
-                game_over = True
-
-        screen.fill(WHITE)
-        pygame.draw.line(screen, GRAY, (0, GROUND_Y), (WIDTH, GROUND_Y), 3)
-
-        dino.draw(screen)
-        obstacle.draw(screen)
-
-        draw_text(screen, font, f"Score: {score}", 16, 16)
-        draw_text(screen, font, "Space/Up/W: jump", 16, 44)
-
-        if game_over:
-            draw_text(screen, big_font, "Crashed", WIDTH // 2 - 70, 100, RED)
-            draw_text(screen, font, "Press R to restart", WIDTH // 2 - 83, 145)
-
-        pygame.display.flip()
-
-
-if __name__ == "__main__":
-    main()
