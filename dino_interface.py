@@ -9,6 +9,12 @@ DO_NOTHING = 0
 JUMP = 1
 ACTIONS = (DO_NOTHING, JUMP)
 
+DINO_STANDING_Y = 192
+DISTANCE_BUCKET_SIZE = 40
+MAX_DISTANCE_BUCKET = 20
+HEIGHT_BUCKET_SIZE = 20
+MAX_HEIGHT_BUCKET = 6
+
 
 @dataclass(frozen=True)
 class DinoObservation:
@@ -23,11 +29,50 @@ class DinoObservation:
         return asdict(self)
 
 
+def bucket_number(value, bucket_size, max_bucket):
+    if value < 0:
+        return 0
+
+    bucket = int(value // bucket_size)
+    return min(bucket, max_bucket)
+
+
+def bucket_velocity(velocity_y):
+    if velocity_y < -1:
+        return "up"
+    if velocity_y > 1:
+        return "down"
+    return "still"
+
+
+def get_state_bucket(state):
+    distance_bucket = bucket_number(
+        value=state["distance_to_obstacle"],
+        bucket_size=DISTANCE_BUCKET_SIZE,
+        max_bucket=MAX_DISTANCE_BUCKET,
+    )
+    height_bucket = bucket_number(
+        value=DINO_STANDING_Y - state["dino_y"],
+        bucket_size=HEIGHT_BUCKET_SIZE,
+        max_bucket=MAX_HEIGHT_BUCKET,
+    )
+    velocity_bucket = bucket_velocity(state["dino_velocity_y"])
+    ground_bucket = int(state["on_ground"])
+
+    return (
+        distance_bucket,
+        height_bucket,
+        velocity_bucket,
+        ground_bucket,
+    )
+
+
 class DinoRunnerInterface:
     """Small RL-style interface for the dino game.
 
     The agent only talks to this class:
     - read current values with reset() or observe()
+    - read bucketed values with observe_bucket()
     - send an action with step(action)
     """
 
@@ -57,6 +102,9 @@ class DinoRunnerInterface:
             obstacle_speed=self.obstacle.speed,
             score=self.score,
         )
+
+    def observe_bucket(self):
+        return get_state_bucket(self.observe().as_dict())
 
     def step(self, action):
         if action not in ACTIONS:

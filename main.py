@@ -5,27 +5,30 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
 
 from dino_game import BLACK, FPS, GRAY, GROUND_Y, HEIGHT, RED, WHITE, WIDTH, draw_text
-from dino_interface import DO_NOTHING, JUMP, DinoRunnerInterface, action_name
+from dino_interface import DO_NOTHING, JUMP, DinoRunnerInterface, action_name, get_state_bucket
 
 
 def draw_interface_panel(screen, font, state, action, reward, done):
+    bucket_state = get_state_bucket(state)
     lines = [
-        "RL interface",
-        f"distance: {state['distance_to_obstacle']:.1f}",
-        f"dino y: {state['dino_y']:.1f}",
-        f"velocity y: {state['dino_velocity_y']:.1f}",
-        f"on ground: {state['on_ground']}",
-        f"obstacle speed: {state['obstacle_speed']:.1f}",
+        "Agent sees",
+        f"distance bucket: {bucket_state[0]}",
+        f"height bucket: {bucket_state[1]}",
+        f"velocity bucket: {bucket_state[2]}",
+        f"ground bucket: {bucket_state[3]}",
+        f"state: {bucket_state}",
         f"action: {action_name(action)}",
         f"reward: {reward:.1f}",
-        f"score: {state['score']}",
     ]
 
     panel_x = 510
-    panel_y = 18
+    panel_y = 22
     line_height = 22
 
     for index, line in enumerate(lines):
+        if not line:
+            continue
+
         color = RED if done and line.startswith("reward") else BLACK
         draw_text(screen, font, line, panel_x, panel_y + index * line_height, color)
 
@@ -35,7 +38,7 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Dino Runner RL Interface")
     clock = pygame.time.Clock()
-    font = pygame.font.SysFont(None, 24)
+    font = pygame.font.SysFont(None, 21)
     big_font = pygame.font.SysFont(None, 44)
 
     env = DinoRunnerInterface(seed=1)
