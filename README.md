@@ -2,7 +2,7 @@
 
 This is a tiny Pygame runner game for practicing reinforcement learning.
 
-Right now `main.py` starts the game, the RL interface, and the Q-table agent. The agent is not trained yet, so it mostly waits and crashes until we add learning.
+Right now `main.py` starts the game, the RL interface, and the Q-table agent. The agent updates Q-values from reward feedback while the game runs.
 
 ## Setup
 
@@ -16,9 +16,9 @@ py -m pip install -r requirements.txt
 py main.py
 ```
 
-This initializes the game, the RL interface, and the Q-table agent. The agent reads the bucketed state, chooses an action from the Q-table, and sends that action to the game.
+This initializes the game, the RL interface, and the Q-table agent. The agent reads the bucketed state, chooses an action from the Q-table, sends that action to the game, then updates the Q-table from the reward.
 
-The Q-table is not trained yet, so the agent will usually choose `0 = do nothing` until we add learning.
+The Q-table is saved to `q_table.json` after each crash/reset and when the window closes.
 
 The UI shows the values the agent sees:
 
@@ -33,6 +33,16 @@ The action values are:
 
 - `0`: do nothing
 - `1`: jump
+
+## How Learning Works
+
+1. The interface turns the game numbers into one bucketed state, like `(3, 0, "still", 1)`.
+2. The Q-table looks up the current scores for waiting and jumping in that state.
+3. The agent either explores with a random action or uses the action with the better Q-value.
+4. The game runs that action for one frame and returns the next state, reward, and crash flag.
+5. The next state is bucketed too, so the agent can compare where it was to where it ended up.
+6. The agent updates the Q-value for the action it just took using the reward and best future Q-value.
+7. The table is saved to `q_table.json`, so learned values carry over between runs.
 
 ## Controls
 

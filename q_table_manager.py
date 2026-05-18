@@ -27,15 +27,6 @@ def get_q_values(state_bucket):
     return q_table[state_bucket]
 
 
-def choose_action(state_bucket):
-    q_values = get_q_values(state_bucket)
-
-    if q_values[JUMP] > q_values[DO_NOTHING]:
-        return JUMP
-
-    return DO_NOTHING
-
-
 def save_q_table(path=Q_TABLE_PATH):
     json_ready_table = {}
 

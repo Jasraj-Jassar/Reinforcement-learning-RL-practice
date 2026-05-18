@@ -3,9 +3,13 @@ import os
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
 
+from agent import DEFAULT_EXPLORATION_RATE, choose_action, learn
 from dino_game import BLACK, FPS, GRAY, GROUND_Y, HEIGHT, RED, WHITE, WIDTH, draw_text
 from dino_interface import DO_NOTHING, DinoRunnerInterface, action_name, get_state_bucket
-from q_learning_agent import choose_action, get_q_values, load_q_table, save_q_table
+from q_table_manager import get_q_values, load_q_table, save_q_table
+
+
+AUTO_RESET_FRAMES = FPS // 2
 
 
 def draw_interface_panel(screen, font, state, action, reward, done):
@@ -22,6 +26,7 @@ def draw_interface_panel(screen, font, state, action, reward, done):
         f"jump q: {q_values[1]:.2f}",
         f"action: {action_name(action)}",
         f"reward: {reward:.1f}",
+        f"explore: {DEFAULT_EXPLORATION_RATE:.0%}",
     ]
 
     panel_x = 510
@@ -48,6 +53,7 @@ def main():
     action = DO_NOTHING
     reward = 0.0
     done = False
+    reset_timer = 0
     running = True
 
     while running:
@@ -60,7 +66,20 @@ def main():
         if not done:
             bucket_state = get_state_bucket(state)
             action = choose_action(bucket_state)
-            state, reward, done, _info = env.step(action)
+            next_state, reward, done, _info = env.step(action)
+            next_bucket_state = get_state_bucket(next_state)
+            learn(bucket_state, action, reward, next_bucket_state, done)
+            state = next_state
+        else:
+            reset_timer += 1
+
+            if reset_timer >= AUTO_RESET_FRAMES:
+                save_q_table()
+                state = env.reset()
+                action = DO_NOTHING
+                reward = 0.0
+                done = False
+                reset_timer = 0
 
         screen.fill(WHITE)
         pygame.draw.line(screen, GRAY, (0, GROUND_Y), (WIDTH, GROUND_Y), 3)
@@ -71,7 +90,7 @@ def main():
 
         if done:
             draw_text(screen, big_font, "Crashed", 225, 95, RED)
-            draw_text(screen, font, "Close window to quit", 218, 140)
+            draw_text(screen, font, "Auto restarting", 235, 140)
 
         pygame.display.flip()
 
