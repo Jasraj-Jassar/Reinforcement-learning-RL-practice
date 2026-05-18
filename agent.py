@@ -4,7 +4,7 @@ from dino_interface import ACTIONS, DO_NOTHING, JUMP
 from q_table_manager import get_q_values
 
 
-DEFAULT_EXPLORATION_RATE = 0.502
+DEFAULT_EXPLORATION_RATE = 0.2
 LEARNING_RATE = 0.502
 DISCOUNT_RATE = 0.95
 

@@ -20,13 +20,13 @@ This initializes the game, the RL interface, and the Q-table agent. The agent re
 
 The Q-table is saved to `q_table.json` after each crash/reset and when the window closes.
 
-For a visual 100-agent trainer in one shared game:
+For a visual 100,000-agent trainer in one shared game:
 
 ```powershell
 py multi_agent_runner.py
 ```
 
-It starts each generation with 100 agents in the same game. Agents disappear when they crash, and a new 100-agent generation starts when none are left.
+It starts each generation with 100,000 agents in the same game. Agents disappear when they crash. To keep the UI fast, it simulates all agents but only draws a small sample plus the blue zero-exploration reference agent.
 
 The UI shows the values the agent sees:
 

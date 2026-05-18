@@ -9,8 +9,9 @@ from dino_interface import DO_NOTHING, JUMP, get_jump_penalty, get_state_bucket
 from q_table_manager import get_q_values, load_q_table, q_table, save_q_table
 
 
-AGENT_COUNT = 10000
+AGENT_COUNT = 100000
 REFERENCE_AGENT_ID = 0
+DRAW_SAMPLE_LIMIT = 400
 SAVE_EVERY_FRAMES = FPS * 5
 RESTART_DELAY_FRAMES = FPS
 
@@ -47,6 +48,7 @@ def start_generation(generation):
     return {
         "generation": generation,
         "agents": [make_agent(index) for index in range(AGENT_COUNT)],
+        "alive_count": AGENT_COUNT,
         "obstacle": Obstacle(),
         "score": 0,
         "best_score": 0,
@@ -57,8 +59,8 @@ def start_generation(generation):
 def step_game(game):
     obstacle = game["obstacle"]
     previous_obstacle_right = obstacle.rect.right
+    updates = 0
 
-    decisions = []
     for agent in game["agents"]:
         if not agent["alive"]:
             continue
@@ -72,15 +74,19 @@ def step_game(game):
             agent["dino"].jump()
             jumped = True
 
-        decisions.append((agent, state_bucket, action, jumped, state["distance_to_obstacle"]))
-
-    for agent, _state_bucket, _action, _jumped, _distance_to_obstacle in decisions:
         agent["dino"].update()
+        agent["state_bucket"] = state_bucket
+        agent["action"] = action
+        agent["jumped"] = jumped
+        agent["distance_to_obstacle"] = state["distance_to_obstacle"]
 
     obstacle.update()
     game["score"] += 1
 
-    for agent, state_bucket, action, jumped, distance_to_obstacle in decisions:
+    for agent in game["agents"]:
+        if not agent["alive"]:
+            continue
+
         next_state = get_agent_state(agent, obstacle, game["score"])
         next_state_bucket = get_state_bucket(next_state)
 
@@ -93,48 +99,62 @@ def step_game(game):
         if passed_obstacle:
             reward += 10.0
 
-        reward += get_jump_penalty(action, jumped, distance_to_obstacle)
+        reward += get_jump_penalty(
+            agent["action"],
+            agent["jumped"],
+            agent["distance_to_obstacle"],
+        )
 
         done = agent["dino"].rect.colliderect(obstacle.rect)
         if done:
             reward = -100.0
             agent["alive"] = False
+            game["alive_count"] -= 1
 
-        learn(state_bucket, action, reward, next_state_bucket, done)
+        learn(agent["state_bucket"], agent["action"], reward, next_state_bucket, done)
 
-        agent["action"] = action
         agent["reward"] = reward
         agent["score"] = game["score"]
+        updates += 1
 
     game["best_score"] = max(game["best_score"], game["score"])
+    return updates
 
 
-def alive_agents(game):
-    return [agent for agent in game["agents"] if agent["alive"]]
+def draw_one_agent(screen, agent, color):
+    dino = agent["dino"]
+    visual_rect = dino.rect.copy()
+    visual_rect.x += agent["id"] % 10
+    pygame.draw.rect(screen, color, visual_rect)
+
+    if agent["action"] == JUMP:
+        pygame.draw.circle(screen, GREEN, (visual_rect.centerx, visual_rect.top - 7), 4)
 
 
-def draw_agents(screen, agents):
-    alive_count = len(agents)
-    ordered_agents = [agent for agent in agents if agent["id"] != REFERENCE_AGENT_ID]
-    ordered_agents.extend(agent for agent in agents if agent["id"] == REFERENCE_AGENT_ID)
+def draw_agents(screen, game):
+    drawn = 0
 
-    for draw_index, agent in enumerate(ordered_agents):
-        dino = agent["dino"]
-        shade = 30 + int(160 * (draw_index / max(alive_count - 1, 1)))
-        color = BLUE if agent["id"] == REFERENCE_AGENT_ID else (shade, shade, shade)
-        visual_rect = dino.rect.copy()
-        visual_rect.x += agent["id"] % 10
-        pygame.draw.rect(screen, color, visual_rect)
+    for agent in game["agents"]:
+        if not agent["alive"] or agent["id"] == REFERENCE_AGENT_ID:
+            continue
 
-        if agent["action"] == JUMP:
-            pygame.draw.circle(screen, GREEN, (visual_rect.centerx, visual_rect.top - 7), 4)
+        shade = 35 + int(140 * (drawn / max(DRAW_SAMPLE_LIMIT - 1, 1)))
+        draw_one_agent(screen, agent, (shade, shade, shade))
+        drawn += 1
+
+        if drawn >= DRAW_SAMPLE_LIMIT:
+            break
+
+    reference_agent = game["agents"][REFERENCE_AGENT_ID]
+    if reference_agent["alive"]:
+        draw_one_agent(screen, reference_agent, BLUE)
 
 
 def draw_dashboard(screen, font, game, total_updates):
     agents = game["agents"]
-    alive = alive_agents(game)
     reference_agent = agents[REFERENCE_AGENT_ID]
-    sample_agent = alive[0] if alive else agents[0]
+    sample_agent = reference_agent
+
     sample_state = get_agent_state(sample_agent, game["obstacle"], game["score"])
     sample_bucket = get_state_bucket(sample_state)
     sample_q = get_q_values(sample_bucket)
@@ -142,7 +162,8 @@ def draw_dashboard(screen, font, game, total_updates):
     lines = [
         f"{AGENT_COUNT} agents, one shared game",
         f"generation: {game['generation']}",
-        f"alive: {len(alive)} / {AGENT_COUNT}",
+        f"alive: {game['alive_count']} / {AGENT_COUNT}",
+        f"rendered: <= {DRAW_SAMPLE_LIMIT} + blue",
         f"blue alive: {reference_agent['alive']}",
         f"blue explore: {reference_agent['exploration_rate']:.0%}",
         f"score: {game['score']}",
@@ -182,10 +203,8 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
-        alive = alive_agents(game)
-        if alive:
-            step_game(game)
-            total_updates += len(alive)
+        if game["alive_count"] > 0:
+            total_updates += step_game(game)
         else:
             game["restart_timer"] += 1
             if game["restart_timer"] >= RESTART_DELAY_FRAMES:
@@ -197,13 +216,13 @@ def main():
 
         screen.fill(WHITE)
         pygame.draw.line(screen, GRAY, (0, GROUND_Y), (WIDTH, GROUND_Y), 3)
-        draw_agents(screen, alive_agents(game))
+        draw_agents(screen, game)
         game["obstacle"].draw(screen)
         draw_dashboard(screen, font, game, total_updates)
 
-        if not alive_agents(game):
+        if game["alive_count"] == 0:
             draw_text(screen, big_font, "Generation ended", 250, 122, RED)
-            draw_text(screen, font, "New 100-agent generation starting", 275, 164, DARK_GRAY)
+            draw_text(screen, font, "New generation starting", 305, 164, DARK_GRAY)
 
         pygame.display.flip()
 
