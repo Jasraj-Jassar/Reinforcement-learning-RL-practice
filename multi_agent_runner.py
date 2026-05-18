@@ -7,6 +7,7 @@ from agent import choose_action, exploration_rate_for_generation, learn
 from dino_game import BLACK, FPS, GRAY, GROUND_Y, HEIGHT, RED, WHITE, WIDTH, Dino, Obstacle, draw_text
 from dino_interface import DO_NOTHING, JUMP, get_jump_penalty, get_state_bucket
 from q_table_manager import get_q_values, load_q_table, q_table, save_q_table
+from training_graph import TrainingGraph
 
 
 AGENT_COUNT = 100000
@@ -54,6 +55,7 @@ def start_generation(generation):
         "obstacle": Obstacle(),
         "score": 0,
         "best_score": 0,
+        "recorded": False,
         "restart_timer": 0,
     }
 
@@ -169,6 +171,7 @@ def draw_dashboard(screen, font, game, total_updates):
         f"rendered: <= {DRAW_SAMPLE_LIMIT} + blue",
         f"blue alive: {reference_agent['alive']}",
         f"blue explore: {reference_agent['exploration_rate']:.0%}",
+        f"blue score: {reference_agent['score']}",
         f"score: {game['score']}",
         f"best score: {game['best_score']}",
         f"updates: {total_updates}",
@@ -194,6 +197,7 @@ def main():
     big_font = pygame.font.SysFont(None, 42)
 
     game = start_generation(generation=1)
+    graph = TrainingGraph()
     total_updates = 0
     frames_since_save = 0
     running = True
@@ -209,6 +213,16 @@ def main():
         if game["alive_count"] > 0:
             total_updates += step_game(game)
         else:
+            if not game["recorded"]:
+                graph.record_generation(
+                    generation=game["generation"],
+                    model_score=game["agents"][REFERENCE_AGENT_ID]["score"],
+                    population_score=game["score"],
+                    q_states=len(q_table),
+                    exploration_rate=game["exploration_rate"],
+                )
+                game["recorded"] = True
+
             game["restart_timer"] += 1
             if game["restart_timer"] >= RESTART_DELAY_FRAMES:
                 game = start_generation(game["generation"] + 1)
@@ -228,8 +242,10 @@ def main():
             draw_text(screen, font, "New generation starting", 305, 164, DARK_GRAY)
 
         pygame.display.flip()
+        graph.tick()
 
     save_q_table()
+    graph.close()
     pygame.quit()
 
 

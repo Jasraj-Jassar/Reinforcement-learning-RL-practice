@@ -13,6 +13,7 @@ env/
 *.tmp
 
 q_table.json
+best_q_table.json
 
 .DS_Store
 Thumbs.db

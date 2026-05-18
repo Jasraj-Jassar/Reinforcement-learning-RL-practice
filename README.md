@@ -28,6 +28,16 @@ py multi_agent_runner.py
 
 It starts each generation with 100,000 agents in the same game. Agents disappear when they crash. To keep the UI fast, it simulates all agents but only draws a small sample plus the blue zero-exploration reference agent.
 
+This also opens a small training graph window. The graph adds one point after each generation ends. It tracks the blue zero-exploration model separately from the full training population, because the last surviving random agent is not always the best measure of the learned model.
+
+For faster training without drawing the game:
+
+```powershell
+py fast_trainer.py
+```
+
+This uses multiple CPU workers, updates the same graph after each batch, saves the current table to `q_table.json`, and saves the best model it has seen to `best_q_table.json`.
+
 The UI shows the values the agent sees:
 
 - distance bucket
