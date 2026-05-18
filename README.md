@@ -38,6 +38,18 @@ py fast_trainer.py
 
 This uses multiple CPU workers, updates the same graph after each batch, saves the current table to `q_table.json`, and saves the best model it has seen to `best_q_table.json`.
 
+To watch the best trained model play without training:
+
+```powershell
+py watch_model.py
+```
+
+It loads `best_q_table.json` when that file exists. To watch a different table:
+
+```powershell
+py watch_model.py --table q_table.json
+```
+
 The UI shows the values the agent sees:
 
 - distance bucket
