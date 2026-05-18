@@ -4,8 +4,10 @@ from dino_interface import ACTIONS, DO_NOTHING, JUMP
 from q_table_manager import get_q_values
 
 
-DEFAULT_EXPLORATION_RATE = 0.2
-LEARNING_RATE = 0.502
+DEFAULT_EXPLORATION_RATE = 0.5
+MIN_EXPLORATION_RATE = 0.02
+EXPLORATION_DECAY = 0.9
+LEARNING_RATE = 0.05
 DISCOUNT_RATE = 0.95
 
 
@@ -23,6 +25,11 @@ def choose_action(state_bucket, exploration_rate=DEFAULT_EXPLORATION_RATE):
         return random.choice(ACTIONS)
 
     return choose_best_action(state_bucket)
+
+
+def exploration_rate_for_generation(generation):
+    decayed_rate = DEFAULT_EXPLORATION_RATE * (EXPLORATION_DECAY ** (generation - 1))
+    return max(MIN_EXPLORATION_RATE, decayed_rate)
 
 
 def learn(

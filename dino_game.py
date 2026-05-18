@@ -16,6 +16,9 @@ BLACK = (25, 25, 25)
 GRAY = (120, 120, 120)
 RED = (200, 40, 40)
 
+OBSTACLE_MIN_GAP = 50
+OBSTACLE_MAX_GAP = 175
+
 
 class Dino:
     def __init__(self):
@@ -62,7 +65,7 @@ class Obstacle:
         return pygame.Rect(self.x, GROUND_Y - self.height, self.width, self.height)
 
     def reset(self):
-        self.x = WIDTH + random.randint(100, 350)
+        self.x = WIDTH + random.randint(OBSTACLE_MIN_GAP, OBSTACLE_MAX_GAP)
 
     def update(self):
         self.x -= self.speed

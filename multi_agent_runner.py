@@ -3,7 +3,7 @@ import os
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame
 
-from agent import DEFAULT_EXPLORATION_RATE, choose_action, learn
+from agent import choose_action, exploration_rate_for_generation, learn
 from dino_game import BLACK, FPS, GRAY, GROUND_Y, HEIGHT, RED, WHITE, WIDTH, Dino, Obstacle, draw_text
 from dino_interface import DO_NOTHING, JUMP, get_jump_penalty, get_state_bucket
 from q_table_manager import get_q_values, load_q_table, q_table, save_q_table
@@ -20,7 +20,7 @@ GREEN = (40, 150, 80)
 DARK_GRAY = (55, 55, 55)
 
 
-def make_agent(index):
+def make_agent(index, exploration_rate):
     return {
         "id": index,
         "dino": Dino(),
@@ -28,7 +28,7 @@ def make_agent(index):
         "action": DO_NOTHING,
         "reward": 0.0,
         "score": 0,
-        "exploration_rate": 0.0 if index == REFERENCE_AGENT_ID else DEFAULT_EXPLORATION_RATE,
+        "exploration_rate": 0.0 if index == REFERENCE_AGENT_ID else exploration_rate,
     }
 
 
@@ -45,9 +45,11 @@ def get_agent_state(agent, obstacle, score):
 
 
 def start_generation(generation):
+    exploration_rate = exploration_rate_for_generation(generation)
     return {
         "generation": generation,
-        "agents": [make_agent(index) for index in range(AGENT_COUNT)],
+        "exploration_rate": exploration_rate,
+        "agents": [make_agent(index, exploration_rate) for index in range(AGENT_COUNT)],
         "alive_count": AGENT_COUNT,
         "obstacle": Obstacle(),
         "score": 0,
@@ -111,7 +113,8 @@ def step_game(game):
             agent["alive"] = False
             game["alive_count"] -= 1
 
-        learn(agent["state_bucket"], agent["action"], reward, next_state_bucket, done)
+        if agent["id"] != REFERENCE_AGENT_ID:
+            learn(agent["state_bucket"], agent["action"], reward, next_state_bucket, done)
 
         agent["reward"] = reward
         agent["score"] = game["score"]
@@ -170,7 +173,7 @@ def draw_dashboard(screen, font, game, total_updates):
         f"best score: {game['best_score']}",
         f"updates: {total_updates}",
         f"q states: {len(q_table)}",
-        f"explore: {DEFAULT_EXPLORATION_RATE:.0%}",
+        f"explore: {game['exploration_rate']:.0%}",
         f"sample state: {sample_bucket}",
         f"wait q: {sample_q[0]:.2f}",
         f"jump q: {sample_q[1]:.2f}",
